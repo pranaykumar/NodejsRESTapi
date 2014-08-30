@@ -60,7 +60,7 @@ app.get('/api/providers/:id', function(req, res) {
 
 /* GET Profiles for a given Provider */
 app.get('/api/providers/:id/profiles', function(req, res) {
-	var results;
+	var results = [];
 	connection.query('select pf.profile_id,pf.name,pf.type,pf.private,pf.deinterlace_input,pf.frame_rate,pf.mezzanine_multipass_encoding \
 					  from providers pv, profile pf, provider_profile_map m \
 					  where pv.provider_id = m.provider_id and pf.profile_id = m.profile_id \
@@ -80,7 +80,13 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 							  if(err)
 								  throw err;
 							  
-							  console.log(stream_rows);
+							  //add stream property to profile object 
+//							  profile_obj.streams = JSON.stringify(stream_rows);
+							  profile_obj.streams = stream_rows;
+
+							  //add profile object element to results array
+							  results.push(profile_obj);
+							  console.log(results);
 							// Nothing went wrong, so callback with a null
 								// error.
 								  return doneCallback(null);	
@@ -90,26 +96,13 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 						
 						async.each(profile_rows,getStreams,function(err){
 							console.log('Finished!');
+							res.type('application/json');
+							res.send(results);
 						});
 
-		
-// // loop through the profile array returned and get streams for each
-// // profile ID
-// for ( var i = 0, len = results.length; i < len; i++) {
-//			
- 
-//
-//				
-// this.results[this.i].streams = stream_rows;
-// console.log(stream_rows);
-// console.log(this.results);
-//
-// }.bind( {i: i,results: results} ));
-//			
-// }
-		results = profile_rows;
-		res.type('application/json');
-		res.send(results);
+//		results = profile_rows;
+//		res.type('application/json');
+//		res.send(results);
 	});
 });
 
