@@ -80,11 +80,10 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 							  if(err)
 								  throw err;
 							  
-							  //add stream property to profile object 
-//							  profile_obj.streams = JSON.stringify(stream_rows);
+							  // add stream property to profile object
 							  profile_obj.streams = stream_rows;
 
-							  //add profile object element to results array
+							  // add profile object element to results array
 							  results.push(profile_obj);
 							  console.log(results);
 							// Nothing went wrong, so callback with a null
@@ -100,9 +99,6 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 							res.send(results);
 						});
 
-//		results = profile_rows;
-//		res.type('application/json');
-//		res.send(results);
 	});
 });
 
