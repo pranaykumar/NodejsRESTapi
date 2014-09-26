@@ -42,9 +42,33 @@ app.get('/api/providers/', function(req, res) {
 	});
 });
 
+/* GET Provider by matching ID or Name or Email */
+app.get('/api/providersearch/:prvdrSrchStr', function(req, res) {
+	var results;
+	var queryStr = 'select * from providers where provider_id like '
+		  + connection.escape(req.params.prvdrSrchStr)
+        +' or  lower(name) like '+connection.escape('%'+(req.params.prvdrSrchStr).toLowerCase()+'%')
+        +' or lower(email) like '+connection.escape('%'+(req.params.prvdrSrchStr).toLowerCase()+'%');
+	
+	console.log(queryStr);
+	
+	connection.query(queryStr, function(err, rows, fields) {
+		if (err){
+			console.log(err);
+// results = [{"Error":"No Record found for the given Provider ID"}];
+// res.send(results);
+			}
+		results = rows;
+		res.type('application/json');
+		res.send(results);
+	});
+});
+
 /* GET Specific Provider */
 app.get('/api/providers/:id', function(req, res) {
 	var results;
+	console.log(req.params.id);
+
 	connection.query('select * from providers where provider_id = '
 			+ connection.escape(req.params.id), function(err, rows, fields) {
 		if (err){
@@ -57,6 +81,9 @@ app.get('/api/providers/:id', function(req, res) {
 		res.send(results);
 	});
 });
+
+
+
 
 /* GET Profiles for a given Provider */
 app.get('/api/providers/:id/profiles', function(req, res) {
