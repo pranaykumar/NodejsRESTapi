@@ -46,7 +46,7 @@ app.get('/api/providers/', function(req, res) {
 app.get('/api/providersearch/:prvdrSrchStr', function(req, res) {
 	var results;
 	var queryStr = 'select * from providers where provider_id like '
-		  + connection.escape(req.params.prvdrSrchStr)
+		  + connection.escape('%'+(req.params.prvdrSrchStr).toLowerCase()+'%')
         +' or  lower(name) like '+connection.escape('%'+(req.params.prvdrSrchStr).toLowerCase()+'%')
         +' or lower(email) like '+connection.escape('%'+(req.params.prvdrSrchStr).toLowerCase()+'%');
 	
