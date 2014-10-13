@@ -70,11 +70,8 @@ app.get('/api/providers/:id', function(req, res) {
 
 	connection.query('select * from providers where provider_id = '
 			+ connection.escape(req.params.id), function(err, rows, fields) {
-		if (err){
+		if (err)
 			console.log(err);
-// results = [{"Error":"No Record found for the given Provider ID"}];
-// res.send(results);
-			}
 		results = rows;
 		res.type('application/json');
 		res.send(results);
@@ -83,18 +80,43 @@ app.get('/api/providers/:id', function(req, res) {
 
 /* GET Specific Profile */
 app.get('/api/profile/:id', function(req, res) {
-	var results;
+	var results = [];
 
 	connection.query('select * from profile where profile_id = '
-			+ connection.escape(req.params.id), function(err, rows, fields) {
-		if (err){
+			+ connection.escape(req.params.id), function(err, row, fields) {
+		if (err)
 			console.log(err);
-// results = [{"Error":"No Record found for the given Provider ID"}];
-// res.send(results);
-			}
-		results = rows;
-		res.type('application/json');
-		res.send(results);
+		
+		var getStreams = function (profile_obj,doneCallback){
+			
+			  stream_qry = 'select s.id,s.stream_id,s.name,s.muxing_format,s.profile,s.audio_sample_rate,s.audio_bitrate,\
+				  s.video_bitrate,s.video_width,s.keyframe_interval_sec,s.watermark,s.multipass_encoding,\
+				  s.segment_length_sec,s.encrypt,s.key_rotation_period,s.video_encryption_level,s.stream_type, s.encode_width, s.h266_profile\
+				  from stream s, profile_stream_map ps where s.stream_id = ps.stream_id\
+				  and ps.profile_id ='+connection.escape(profile_obj.profile_id);
+			  
+			  connection.query(stream_qry,function(err, stream_rows, fields){
+				  if(err)
+					  throw err;
+				  
+				  // add stream property to profile object
+				  profile_obj.streams = stream_rows;
+
+				  // add profile object element to results array
+				  results.push(profile_obj);
+				  console.log(results);
+				// Nothing went wrong, so callback with a null
+					// error.
+					  return doneCallback(null);	
+			  });
+				
+			};
+			
+			async.each(row,getStreams,function(err){
+				console.log('Finished!');
+				res.type('application/json');
+				res.send(results);
+			});
 	});
 });
 
@@ -113,9 +135,9 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 		
 					  var getStreams = function (profile_obj,doneCallback){
 							
-						  stream_qry = 'select s.stream_id,s.name,s.muxing_format,s.profile,s.audio_sample_rate,s.audio_bitrate,\
+						  stream_qry = 'select s.id,s.stream_id,s.name,s.muxing_format,s.profile,s.audio_sample_rate,s.audio_bitrate,\
 							  s.video_bitrate,s.video_width,s.keyframe_interval_sec,s.watermark,s.multipass_encoding,\
-							  s.segment_length_sec,s.encrypt,s.key_rotation_period,s.video_encryption_level\
+							  s.segment_length_sec,s.encrypt,s.key_rotation_period,s.video_encryption_level,s.stream_type, s.encode_width, s.h266_profile\
 							  from stream s, profile_stream_map ps where s.stream_id = ps.stream_id\
 							  and ps.profile_id ='+connection.escape(profile_obj.profile_id);
 						  
