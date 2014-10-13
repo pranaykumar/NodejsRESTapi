@@ -67,9 +67,25 @@ app.get('/api/providersearch/:prvdrSrchStr', function(req, res) {
 /* GET Specific Provider */
 app.get('/api/providers/:id', function(req, res) {
 	var results;
-	console.log(req.params.id);
 
 	connection.query('select * from providers where provider_id = '
+			+ connection.escape(req.params.id), function(err, rows, fields) {
+		if (err){
+			console.log(err);
+// results = [{"Error":"No Record found for the given Provider ID"}];
+// res.send(results);
+			}
+		results = rows;
+		res.type('application/json');
+		res.send(results);
+	});
+});
+
+/* GET Specific Profile */
+app.get('/api/profile/:id', function(req, res) {
+	var results;
+
+	connection.query('select * from profile where profile_id = '
 			+ connection.escape(req.params.id), function(err, rows, fields) {
 		if (err){
 			console.log(err);
