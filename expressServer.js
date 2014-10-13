@@ -195,6 +195,24 @@ app.put('/api/providers/:id', function(req, res) {
 	});
 });
 
+/* Update Profile */
+app.put('/api/profile/:id', function(req, res) {
+	connection.query('update profile set image_interval_sec = ' + connection.escape(req.body.image_interval_sec) 
+			+ ', custom_image_widths = ' + connection.escape(req.body.custom_image_widths)
+			+ ', deinterlace_input = ' + connection.escape(req.body.deinterlace_input)
+			+ ', override_source = ' + connection.escape(req.body.override_source)
+			+ ', mezzanine_multipass_encoding = ' + connection.escape(req.body.mezzanine_multipass_encoding)
+			+ ' where profile_id = ' + connection.escape(req.params.id), function(err, result) {
+		if (err)
+			throw err;
+		if (result)
+			res.type('application/json');
+		res.send([ {
+			"msg" : "Profile details updated."
+		} ]);
+	});
+});
+
 /* Delete a Provider */
 app.delete('/api/providers/:id', function(req, res) {
 	connection.query('delete from providers where provider_id = '
