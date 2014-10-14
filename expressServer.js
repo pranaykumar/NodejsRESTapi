@@ -275,12 +275,38 @@ app.delete('/api/profile/:id', function(req, res) {
 			+ connection.escape(req.params.id), function(err, result) {
 		if (err)
 			throw err;
-		if (result)
-			res.type('application/json');
+		res.type('application/json');
 		res.send([ {
 			"msg" : "Profile deleted."
 		} ]);
 	});
+});
+
+/* Delete multiple Profile */
+app.delete('/api/profile', function(req, res) {
+	var profiles4Deletion = '';
+	
+	async.each(req.body.profiles, function(profile_obj,doneCallback) {
+		profiles4Deletion = profiles4Deletion +','+connection.escape(profile_obj.profile_id);
+		
+		return doneCallback(null);	
+	}, function(err) {
+		if (err)
+			throw err;
+		console.log(profiles4Deletion.substring(1,profiles4Deletion.length));
+	});
+	
+	 connection.query('delete from provider_profile_map where profile_id in (' +
+			 profiles4Deletion.substring(1,profiles4Deletion.length)+')', 
+			 function(err, result) { 
+		 		if (err) throw err; 
+		 		if (result) 
+		 			res.type('application/json'); 
+		 		res.send([ 
+		 		           { "msg" : "Profiles deleted." } 
+		 		         ]); 
+		 		});
+	 
 });
 
 app.listen(3000);
