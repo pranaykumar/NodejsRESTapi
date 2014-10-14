@@ -126,7 +126,7 @@ app.get('/api/profile/:id', function(req, res) {
 /* GET Profiles for a given Provider */
 app.get('/api/providers/:id/profiles', function(req, res) {
 	var results = [];
-	connection.query('select pf.profile_id,pf.name,pf.type,pf.private,pf.deinterlace_input,pf.frame_rate,pf.mezzanine_multipass_encoding \
+	connection.query('select pf.profile_id,pf.name,pf.type,pf.private,pf.deinterlace_input,pf.frame_rate,pf.mezzanine_multipass_encoding, pf.image_interval_sec, pf.custom_image_widths \
 					  from providers pv, profile pf, provider_profile_map m \
 					  where pv.provider_id = m.provider_id and pf.profile_id = m.profile_id \
 					  and pv.provider_id = '+ connection.escape(req.params.id), function(err, profile_rows, fields) {
@@ -197,11 +197,50 @@ app.put('/api/providers/:id', function(req, res) {
 
 /* Update Profile */
 app.put('/api/profile/:id', function(req, res) {
-	connection.query('update profile set image_interval_sec = ' + connection.escape(req.body.image_interval_sec) 
-			+ ', custom_image_widths = ' + connection.escape(req.body.custom_image_widths)
-			+ ', deinterlace_input = ' + connection.escape(req.body.deinterlace_input)
-			+ ', override_source = ' + connection.escape(req.body.override_source)
-			+ ', mezzanine_multipass_encoding = ' + connection.escape(req.body.mezzanine_multipass_encoding)
+	
+// if the request body comes with profie_type param, then call is for making the
+// profile_id default_video
+if(req.body.profile_type !== undefined){
+
+	var qry = 'update profile set type = null where profile_id in (select profile_id from provider_profile_map where provider_id = '+ connection.escape(req.body.provider_id)+')	and profile_id != '+connection.escape(req.params.id);
+	console.log(qry);
+	
+	var resetDefault = function(doneCallback) {		
+		connection.query(qry, 
+				function(err, result) {
+			if (err)
+				throw err;
+
+			return doneCallback(null);
+		});
+	};
+		
+	var newDefault = function(doneCallback) {		
+		connection.query('update profile set type='+connection.escape(req.body.profile_type) 
+						 + ' where profile_id = ' + connection.escape(req.params.id), 
+				function(err, result) {
+			if (err)
+				throw err;
+
+			return doneCallback(null);
+		});		
+	};
+	
+	// call resetDefault and newDefault in series
+	async.series([resetDefault,newDefault], function(err) {
+		if (err) throw err;
+		res.type('application/json');
+		res.send([ {
+			"msg" : "Provider details updated."
+		} ]);
+	});
+	
+}else {
+	connection.query('update profile set image_interval_sec = ' + connection.escape(req.body.profile.image_interval_sec) 
+			+ ', custom_image_widths = ' + connection.escape(req.body.profile.custom_image_widths)
+			+ ', deinterlace_input = ' + connection.escape(req.body.profile.deinterlace_input)
+			+ ', override_source = ' + connection.escape(req.body.profile.override_source)
+			+ ', mezzanine_multipass_encoding = ' + connection.escape(req.body.profile.mezzanine_multipass_encoding)
 			+ ' where profile_id = ' + connection.escape(req.params.id), function(err, result) {
 		if (err)
 			throw err;
@@ -211,18 +250,35 @@ app.put('/api/profile/:id', function(req, res) {
 			"msg" : "Profile details updated."
 		} ]);
 	});
+}
 });
 
 /* Delete a Provider */
 app.delete('/api/providers/:id', function(req, res) {
 	connection.query('delete from providers where provider_id = '
-			+ req.params.id, function(err, result) {
+			+ connection.escape(req.params.id), function(err, result) {
 		if (err)
 			throw err;
 		if (result)
 			res.type('application/json');
 		res.send([ {
 			"msg" : "Provider deleted."
+		} ]);
+	});
+});
+
+/* Delete a Profile */
+app.delete('/api/profile/:id', function(req, res) {
+	console.log("Trying to delete profile ID "+req.params.id);
+	
+	connection.query('delete from provider_profile_map where profile_id = '
+			+ connection.escape(req.params.id), function(err, result) {
+		if (err)
+			throw err;
+		if (result)
+			res.type('application/json');
+		res.send([ {
+			"msg" : "Profile deleted."
 		} ]);
 	});
 });
