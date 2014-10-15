@@ -4,6 +4,7 @@ var mysql = require('mysql');
 var cors = require('cors');
 var bodyParser = require('body-parser');
 var async = require('async');
+var uuid = require('node-uuid');
 
 /* New Application ENV OBJ */
 var app = express();
@@ -187,13 +188,23 @@ app.post('/api/providers/', function(req, res) {
 /* Add New Profile */
 app.post('/api/profile/', function(req, res) {
 
-	var qry = 'insert into profile (id, profile_id,name,type,private,deinterlace_input,frame_rate,mezzanine_multipass_encoding)\
-				values (NULL, uuid() ,'+ connection.escape(req.body.profile.name) +',"video",'
-				+ connection.escape(parseInt(req.body.profile.private))+','+
-				+ connection.escape(parseInt(req.body.profile.deinterlace_input))+','+ 
-				+ connection.escape(parseFloat(req.body.profile.frame_rate))+','+ 
-				+ connection.escape(parseInt(req.body.profile.mezzanine_multipass_encoding)) 
+	var seqno = 0;
+	var profile_id = uuid.v1();
+	console.log("profile_id generated is "+ profile_id);
+	
+	var qry = 'insert into profile (id, profile_id,name,type,private,deinterlace_input,frame_rate,mezzanine_multipass_encoding,custom_image_widths,image_interval_sec)\
+				values (NULL, '
+				+ connection.escape(profile_id)+','
+			    + connection.escape(req.body.profile.name) +',"video",'
+				+ connection.escape(parseInt(req.body.profile.private))+','
+				+ connection.escape(parseInt(req.body.profile.deinterlace_input))+','
+				+ connection.escape(parseFloat(req.body.profile.frame_rate))+','
+				+ connection.escape(parseInt(req.body.profile.mezzanine_multipass_encoding))+',' 
+				+ connection.escape(req.body.profile.custom_image_widths)+','
+				+ connection.escape(parseInt(req.body.profile.image_interval_sec))
 				+ ')';
+	
+	console.log(qry);
 	
 	var insertProfile = function (doneCallback){
 	connection.query(qry, function(err, result) {
@@ -203,9 +214,27 @@ app.post('/api/profile/', function(req, res) {
 			});
 	};
 	
-	var selectLatestProfile = function(doneCallback) {		
-		connection.query('insert into provider_profile_map(provider_id, profile_id, seq_num) values('
-						 +connection.escape(req.body.provider)+','+connection.escape(req.body.profile), 
+	var selectMaxSeqNum = function(doneCallback) {
+		connection.query('select max(seq_num) maxsn from provider_profile_map where provider_id = '+ connection.escape(req.body.provider), 
+		function(err, result) {
+			if (err)
+				throw err;
+			seqno = result[0].maxsn;
+			return doneCallback(null);
+		});		
+	};
+	
+	console.log("seq no is : "+ seqno);
+	
+	var insertQry = 'insert into provider_profile_map(provider_id, profile_id, seq_num) values('
+	 +connection.escape(req.body.provider)+','
+	 +connection.escape(profile_id)+','
+	 +seqno
+	 +')';
+	
+
+	var insertProviderProfMap = function(doneCallback) {		
+		connection.query(insertQry, 
 				function(err, result) {
 			if (err)
 				throw err;
@@ -215,7 +244,7 @@ app.post('/api/profile/', function(req, res) {
 	};
 	
 	// call resetDefault and newDefault in series
-	async.series([insertProfile,insertProviderProfMap], function(err) {
+	async.series([insertProfile,selectMaxSeqNum,insertProviderProfMap], function(err) {
 		if (err) throw err;
 		res.type('application/json');
 		res.send([ {
