@@ -129,7 +129,7 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 	connection.query('select pf.profile_id,pf.name,pf.type,pf.private,pf.deinterlace_input,pf.frame_rate,pf.mezzanine_multipass_encoding, pf.image_interval_sec, pf.custom_image_widths \
 					  from providers pv, profile pf, provider_profile_map m \
 					  where pv.provider_id = m.provider_id and pf.profile_id = m.profile_id \
-					  and pv.provider_id = '+ connection.escape(req.params.id), function(err, profile_rows, fields) {
+					  and pv.provider_id = '+ connection.escape(req.params.id) + 'order by pf.name', function(err, profile_rows, fields) {
 		if (err)
 			throw err;
 		
