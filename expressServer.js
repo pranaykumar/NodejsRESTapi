@@ -80,6 +80,8 @@ app.get('/api/providers/:id', function(req, res) {
 
 /* GET Specific Profile */
 app.get('/api/profile/:id', function(req, res) {
+	console.log("inside specific profile");
+
 	var results = [];
 
 	connection.query('select * from profile where profile_id = '
@@ -95,6 +97,8 @@ app.get('/api/profile/:id', function(req, res) {
 				  from stream s, profile_stream_map ps where s.stream_id = ps.stream_id\
 				  and ps.profile_id ='+connection.escape(profile_obj.profile_id);
 			  
+			  console.log(stream_qry);
+			  
 			  connection.query(stream_qry,function(err, stream_rows, fields){
 				  if(err)
 					  throw err;
@@ -104,7 +108,6 @@ app.get('/api/profile/:id', function(req, res) {
 
 				  // add profile object element to results array
 				  results.push(profile_obj);
-				  console.log(results);
 				// Nothing went wrong, so callback with a null
 					// error.
 					  return doneCallback(null);	
@@ -114,6 +117,7 @@ app.get('/api/profile/:id', function(req, res) {
 			
 			async.each(row,getStreams,function(err){
 				console.log('Finished!');
+				console.log(results);
 				res.type('application/json');
 				res.send(results);
 			});
@@ -125,6 +129,7 @@ app.get('/api/profile/:id', function(req, res) {
 
 /* GET Profiles for a given Provider */
 app.get('/api/providers/:id/profiles', function(req, res) {
+	console.log("inside profile");
 	var results = [];
 	connection.query('select pf.profile_id,pf.name,pf.type,pf.private,pf.deinterlace_input,pf.frame_rate,pf.mezzanine_multipass_encoding, pf.image_interval_sec, pf.custom_image_widths \
 					  from providers pv, profile pf, provider_profile_map m \
@@ -150,7 +155,6 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 
 							  // add profile object element to results array
 							  results.push(profile_obj);
-							  console.log(results);
 							// Nothing went wrong, so callback with a null
 								// error.
 								  return doneCallback(null);	
@@ -159,7 +163,6 @@ app.get('/api/providers/:id/profiles', function(req, res) {
 						};
 						
 						async.each(profile_rows,getStreams,function(err){
-							console.log('Finished!');
 							res.type('application/json');
 							res.send(results);
 						});
@@ -181,6 +184,48 @@ app.post('/api/providers/', function(req, res) {
 			});
 });
 
+/* Add New Profile */
+app.post('/api/profile/', function(req, res) {
+
+	var qry = 'insert into profile (id, profile_id,name,type,private,deinterlace_input,frame_rate,mezzanine_multipass_encoding)\
+				values (NULL, uuid() ,'+ connection.escape(req.body.profile.name) +',"video",'
+				+ connection.escape(parseInt(req.body.profile.private))+','+
+				+ connection.escape(parseInt(req.body.profile.deinterlace_input))+','+ 
+				+ connection.escape(parseFloat(req.body.profile.frame_rate))+','+ 
+				+ connection.escape(parseInt(req.body.profile.mezzanine_multipass_encoding)) 
+				+ ')';
+	
+	var insertProfile = function (doneCallback){
+	connection.query(qry, function(err, result) {
+				if (err)
+					throw err;
+				return doneCallback(null);
+			});
+	};
+	
+	var selectLatestProfile = function(doneCallback) {		
+		connection.query('insert into provider_profile_map(provider_id, profile_id, seq_num) values('
+						 +connection.escape(req.body.provider)+','+connection.escape(req.body.profile), 
+				function(err, result) {
+			if (err)
+				throw err;
+
+			return doneCallback(null);
+		});		
+	};
+	
+	// call resetDefault and newDefault in series
+	async.series([insertProfile,insertProviderProfMap], function(err) {
+		if (err) throw err;
+		res.type('application/json');
+		res.send([ {
+			"msg" : "Profile Added."
+		} ]);
+	});
+	
+	
+});
+
 /* Update Provider */
 app.put('/api/providers/:id', function(req, res) {
 	connection.query('update providers set name = ' + connection.escape(req.body.name) + ', email = ' + connection.escape(req.body.email)
@@ -196,8 +241,7 @@ app.put('/api/providers/:id', function(req, res) {
 });
 
 /* Update Profile */
-app.put('/api/profile/:id', function(req, res) {
-	
+app.put('/api/profile/:id', function(req, res) {	
 // if the request body comes with profie_type param, then call is for making the
 // profile_id default_video
 if(req.body.profile_type !== undefined){
